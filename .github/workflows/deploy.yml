@@ -45,6 +45,7 @@ jobs:
       # Build Docker Image
       # -----------------------------
       - name: Build Docker image
+        working-directory: ./calculator-app
         run: |
           docker build -t $ECR_REPOSITORY:latest .
 
