@@ -19,6 +19,8 @@ The architecture follows a standard two-tier, multi-AZ pattern:
 
 ## Repository Structure
 
+```
+.
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions CI/CD pipeline
@@ -27,28 +29,28 @@ The architecture follows a standard two-tier, multi-AZ pattern:
 │   ├── src/                    # Application source
 │   └── package.json
 └── terraform/
-├── main.tf                 # Root module wiring all sub-modules
-├── variables.tf
-├── terraform.tfvars
-├── outputs.tf
-├── provider.tf
-└── modules/
-├── vpc/                # VPC, subnets, IGW, NAT, route tables
-├── security_group/     # ALB and ECS security groups
-├── alb/                # Application Load Balancer + target group
-├── ecr/                # Elastic Container Registry
-├── ecs/                # ECS Cluster, Task Definition, Service (Fargate)
-├── iam/                # IAM roles and policies
-├── cloudwatch/         # Log groups, metrics
-└── autoscaling/        # ECS Auto Scaling policies
-
+    ├── main.tf                 # Root module wiring all sub-modules
+    ├── variables.tf
+    ├── terraform.tfvars
+    ├── outputs.tf
+    ├── provider.tf
+    └── modules/
+        ├── vpc/                # VPC, subnets, IGW, NAT, route tables
+        ├── security_group/     # ALB and ECS security groups
+        ├── alb/                # Application Load Balancer + target group
+        ├── ecr/                # Elastic Container Registry
+        ├── ecs/                # ECS Cluster, Task Definition, Service (Fargate)
+        ├── iam/                # IAM roles and policies
+        ├── cloudwatch/         # Log groups, metrics
+        └── autoscaling/        # ECS Auto Scaling policies
+```
 
 ---
 
 ## Design Decisions
 
 ### 1. ECS Fargate over EC2
-Fargate was chosen because it eliminates the overhead of managing EC2 instances. There is no patching, no node group management, and capacity is provisioned per task. This keeps the operational burden minimal while still delivering container-level isolation.
+Amazon ECS Fargate was selected instead of ECS on EC2 because it removes the need to manage virtual machines. AWS handles server provisioning, patching, scaling, and infrastructure maintenance, allowing the deployment to focus entirely on containerized workloads. This simplifies operations and reduces administrative overhead.
 
 ### 2. Multi-AZ Deployment
 ECS tasks are distributed across two private subnets in two separate Availability Zones. This ensures the application remains available even if one AZ experiences an outage. The ALB spans both public subnets and load-balances traffic across both tasks.
