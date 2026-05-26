@@ -22,10 +22,14 @@ module "ecr" {
 module "cloudwatch" {
   source       = "./modules/cloudwatch"
   project_name = var.project_name
+  # Connect the ECS module outputs to your CloudWatch module variables
+  cluster_name = module.ecs.cluster_name
+  service_name = module.ecs.service_name
 }
 
 module "iam" {
   source = "./modules/iam"
+  iam_user_name = var.iam_user_name
 }
 
 module "alb" {

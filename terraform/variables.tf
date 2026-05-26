@@ -23,3 +23,6 @@ variable "min_capacity" {}
 variable "max_capacity" {}
 
 variable "container_port" {}
+variable "iam_user_name" {
+  type = string
+}

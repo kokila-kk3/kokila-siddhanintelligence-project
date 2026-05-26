@@ -18,80 +18,67 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------
-      # Checkout Code
-      # -----------------------------
-      - name: Checkout source
+      # Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # -----------------------------
-      # Configure AWS
-      # -----------------------------
+      # Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      # -----------------------------
-      # Login to ECR
-      # -----------------------------
+      # Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # -----------------------------
+      # Generate Image Tag using Git SHA
+      - name: Generate Image Tag
+        id: image-tag
+        run: |
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
       # Build Docker Image
-      # -----------------------------
-      - name: Build Docker image
-        working-directory: ./calculator-app
+      - name: Build Docker Image
         run: |
-          docker build -t $ECR_REPOSITORY:latest .
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG ./calculator-app
 
-      # -----------------------------
       # Tag Docker Image
-      # -----------------------------
-      - name: Tag Docker image
+      - name: Tag Docker Image
         run: |
-          docker tag $ECR_REPOSITORY:latest \
-          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG \
+          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # -----------------------------
       # Push Docker Image
-      # -----------------------------
-      - name: Push Docker image
+      - name: Push Docker Image
         run: |
           docker push \
-          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # -----------------------------
       # Download Existing Task Definition
-      # -----------------------------
-      - name: Download task definition
+      - name: Download Task Definition
         run: |
           aws ecs describe-task-definition \
-          --task-definition $ECS_TASK_DEFINITION \
-          --query taskDefinition > task-definition.json
+            --task-definition $ECS_TASK_DEFINITION \
+            --query taskDefinition > task-definition.json
 
-      # -----------------------------
-      # Update ECS Task Definition
-      # -----------------------------
-      - name: Fill in the new image ID
-        id: task-def
+      # Update Task Definition with New Image
+      - name: Render New ECS Task Definition
+        id: render-task-definition
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-definition.json
-          container-name: ${{ secrets.CONTAINER_NAME }}
-          image: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # -----------------------------
       # Deploy to ECS
-      # -----------------------------
-      - name: Deploy to ECS Service
+      - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.ECS_SERVICE }}
-          cluster: ${{ secrets.ECS_CLUSTER }}
+          task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true

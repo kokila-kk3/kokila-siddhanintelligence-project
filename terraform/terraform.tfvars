@@ -28,3 +28,5 @@ min_capacity = 2
 max_capacity = 4
 
 container_port = 80
+
+iam_user_name = "kokila-terraform-user"
