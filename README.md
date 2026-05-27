@@ -50,7 +50,7 @@ The architecture follows a standard two-tier, multi-AZ pattern:
 ## Design Decisions
 
 ### 1. ECS Fargate over EC2
-Amazon ECS Fargate was selected instead of ECS on EC2 because it removes the need to manage virtual machines. AWS handles server provisioning, patching, scaling, and infrastructure maintenance, allowing the deployment to focus entirely on containerized workloads. This simplifies operations and reduces administrative overhead.
+Although ECS Fargate may be more expensive than EC2 for continuously running workloads, it reduces operational overhead by eliminating EC2 instance management,OS patching,Capacity management,Cluster maintenance,This improves engineering efficiency and reduces infrastructure management complexity.
 
 ### 2. Multi-AZ Deployment
 ECS tasks are distributed across two private subnets in two separate Availability Zones. This ensures the application remains available even if one AZ experiences an outage. The ALB spans both public subnets and load-balances traffic across both tasks.
@@ -74,8 +74,6 @@ The pipeline triggers on every push to `main`. It builds and tags the Docker ima
 ECS Service Auto Scaling is configured with configurable `min_capacity` and `max_capacity` to handle traffic spikes without manual intervention.
 
 ---
-
-## Trade-offs Considered
 
 ```
 ## Trade-offs Considered
@@ -104,10 +102,12 @@ Breaking infrastructure into modules (vpc, alb, ecs, ecr, iam, cloudwatch, autos
 
 ### Current Cost Drivers
 - **ECS Fargate tasks**: Billed per vCPU and GB of memory per second while running.
-- **NAT Gateways**: ~$0.045/hour each plus data processing charges. Two gateways for HA roughly doubles this cost.
+- **NAT Gateways**: NAT Gateway pricing includes both hourly charges and data processing costs. Since ECS tasks run in private subnets, outbound internet access requires NAT.
 - **Application Load Balancer**: Fixed hourly cost plus LCU charges based on traffic.
 - **ECR**: Storage cost per GB of stored image data.
 - **CloudWatch**: Log ingestion and storage charges.
+
+
 
 ### Optimization Approaches
 
@@ -115,15 +115,11 @@ Breaking infrastructure into modules (vpc, alb, ecs, ecr, iam, cloudwatch, autos
 
 **Auto Scaling**: The autoscaling module ensures tasks scale out only when needed and scale back in during low-traffic periods, avoiding over-provisioning at rest.
 
-**Single NAT Gateway for non-production environments**: For dev or staging, a single NAT Gateway reduces cost. The dual-NAT setup is reserved for production where AZ-level HA is required.
+**Single NAT Gateway**: Can use a single NAT Gateway for the  ECS tasks that runs across 2 Availability Zones in the same region
 
 **ECR lifecycle policies**: Add lifecycle rules to automatically delete untagged or old images from ECR to control storage costs.
 
 **CloudWatch log retention**: Set a log retention policy (e.g., 7–30 days) on log groups rather than retaining logs indefinitely.
-
-**Fargate Spot for non-critical workloads**: For dev/staging environments, Fargate Spot can reduce compute costs by up to 70% in exchange for the possibility of task interruption.
-
-**Reserved capacity**: If the service runs continuously at a predictable baseline, Compute Savings Plans can reduce Fargate costs by up to 52% compared to on-demand pricing.
 
 ---
 
