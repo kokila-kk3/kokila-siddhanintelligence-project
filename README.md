@@ -142,7 +142,7 @@ Set the following secrets in your GitHub repository:
 |---|---|
 | `AWS_ACCESS_KEY_ID` | IAM user access key |
 | `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
-| `AWS_REGION` | AWS region (e.g., `ap-south-1`) |
+| `AWS_REGION` | AWS region |
 | `ECR_REPOSITORY` | ECR repository name |
 | `ECS_CLUSTER` | ECS cluster name |
 | `ECS_SERVICE` | ECS service name |
